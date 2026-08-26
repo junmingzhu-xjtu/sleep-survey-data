@@ -337,6 +337,22 @@ const CONFIG = {
   },
 };
 
+// ==================== 环境自检 ====================
+(function(){
+  if (location.protocol === 'file:') {
+    // 双击本地打开 HTML 时无法向服务器/API 提交,给一个明确提示
+    const tip = document.createElement('div');
+    tip.style.cssText = 'background:#fef3c7;color:#92400e;padding:10px 14px;border-radius:8px;font-size:.83em;margin-top:12px;text-align:center;line-height:1.6';
+    tip.textContent = CONFIG.MODE === 'local'
+      ? '⚠️ 当前为本地文件模式，无法提交数据。请通过收集服务器地址或公网链接打开本问卷。'
+      : '⚠️ 本地文件模式 + GitHub 通道：可正常填写提交（需已配置有效令牌）。';
+    document.querySelector('.container').prepend(tip);
+  }
+  if (CONFIG.MODE === 'github' && (CONFIG.GITHUB.TOKEN.includes('__') || CONFIG.GITHUB.TOKEN.length < 20)) {
+    console.warn('GitHub 令牌未配置（仍是占位符），提交将失败。');
+  }
+})();
+
 // ==================== 量级标签 ====================
 const L5  = ['1 完全不符合','2 比较不符合','3 不确定','4 比较符合','5 完全符合'];
 const FRQ = ['1 从不','2 很少','3 有时','4 经常','5 几乎每天'];
@@ -345,7 +361,7 @@ const ALW = ['1 从不','2 很少','3 有时','4 经常','5 几乎总是'];
 const DAY = ['1 0天','2 1-2天','3 3-4天','4 5-6天','5 几乎每天'];
 
 // ==================== 动态生成 Likert 选项 ====================
-document.querySelectorAll('.card[data-module] .q').forEach(q => {
+document.querySelectorAll('.card[data-module] .q, .card[data-module] .q-attn').forEach(q => {
   const nm = q.dataset.name;
   const opts = q.querySelector('.opts');
   if (!opts) return;
@@ -444,13 +460,15 @@ document.getElementById('mainForm').addEventListener('submit', async function(e)
   e.preventDefault();
   if (!document.querySelector('input[name="scr_stu"][value="yes"]')?.checked) { alert('请确认全日制本科在读。'); return; }
   if (!document.getElementById('consentCb').checked) { alert('请勾选知情同意。'); return; }
+  if (CONFIG.MODE==='github' && (CONFIG.GITHUB.TOKEN.includes('__') || CONFIG.GITHUB.TOKEN.length < 20)) { alert('⚠️ 问卷未配置有效的 GitHub 令牌，无法提交。请联系调查员。'); return; }
   // 排除项检查
   const ex = [...document.querySelectorAll('input[name="A5"]:checked')].map(c=>c.value).filter(v=>v!=='none');
   if (ex.length>0) { document.getElementById('failOv').classList.add('show'); return; }
 
   const names=new Set(); allRadios().forEach(r=>names.add(r.name));
   for (const n of names) { if(!rv(n)){ document.querySelector(`input[name="${n}"]`)?.closest('.section')?.scrollIntoView({behavior:'smooth',block:'center'}); alert('请完成所有题目。'); return; }}
-  if (rv('G4')!=='1') { alert('⚠️ 注意力检测题（作息规律性板块第 4 题）未按要求作答，请返回修改。'); document.getElementById('s8').scrollIntoView({behavior:'smooth',block:'center'}); return; }
+  if (!rv('G4')) { alert('请完成注意力检测题（作息规律性板块第 4 题）。'); document.getElementById('s8').scrollIntoView({behavior:'smooth',block:'center'}); return; }
+  if (rv('G4')!=='1') { alert('⚠️ 注意力检测题（作息规律性板块第 4 题）未按要求作答，请选择"完全不符合"后提交。'); document.getElementById('s8').scrollIntoView({behavior:'smooth',block:'center'}); return; }
   const c5=parseInt(rv('C5')), j1=parseInt(rv('J1'));
   if (!isNaN(c5)&&!isNaN(j1)&&Math.abs(c5-j1)>1) { if(!confirm('⚠️ 一致性核查差异较大，是否仍提交？（建议取消返回修改）')){ document.getElementById('s10').scrollIntoView({behavior:'smooth',block:'center'}); return; }}
   const i1=parseFloat(document.querySelector('input[name="I1"]').value), i2=parseFloat(document.querySelector('input[name="I2"]').value);
