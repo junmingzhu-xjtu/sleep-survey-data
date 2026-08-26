@@ -1,0 +1,53 @@
+# 问卷公网部署: 构建时自动注入配置并发布到 GitHub Pages
+# 无需手动修改 index.html —— OWNER/REPO 从仓库自动读取,TOKEN 从 Secret 注入(不进 git 历史)
+name: Deploy survey to Pages
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Inject config into index.html
+        run: |
+          OWNER=$(echo "$GITHUB_REPOSITORY" | cut -d/ -f1)
+          REPO=$(echo "$GITHUB_REPOSITORY" | cut -d/ -f2)
+          sed -i "s|__GITHUB_OWNER__|$OWNER|g; s|__GITHUB_REPO__|$REPO|g" index.html
+          sed -i "s|__SURVEY_TOKEN__|${{ secrets.SURVEY_TOKEN }}|g" index.html
+          echo "配置注入完成: owner=$OWNER repo=$REPO"
+          echo "index.html 大小: $(wc -c < index.html) 字节 (问卷应为 36000-38000)"
+          if grep -q "__SURVEY_TOKEN__" index.html; then
+            echo "::error::令牌未注入: 请先在仓库 Settings → Secrets and variables → Actions 添加 SURVEY_TOKEN"
+            exit 1
+          fi
+          if ! grep -q "survey-response" index.html; then
+            echo "::error::index.html 不是问卷文件(缺少提交代码), 请上传本地 survey-web-deploy/index.html 覆盖"
+            exit 1
+          fi
+          echo "检查通过: 问卷文件与令牌均已就绪"
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+
+      - name: Deploy to GitHub Pages
+        uses: actions/deploy-pages@v4
