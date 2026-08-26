@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>大学生睡眠状况调查问卷</title>
+<!--
+  ============================================================
+  大学生睡眠状况调查问卷 v3
+  · 共约 45 题,作答约 5–8 分钟,匿名,数据仅用于学术研究
+  · 提交方式: 将回答 POST 至 CONFIG.ENDPOINT(默认 /api/submit),
+    由收集服务器(collect_server.py)保存到 survey-data/responses.jsonl
+  · 如需部署到其他地址,只需修改下方 CONFIG
+  ============================================================
+-->
+<style>
+  :root {
+    --bg:#f0f2f5; --card:#fff; --text:#1e293b; --sub:#64748b;
+    --accent:#6366f1; --warn:#ef4444; --ok:#10b981;
+    --radius:14px; --shadow:0 1px 3px rgba(0,0,0,.06);
+  }
+  * { box-sizing:border-box; margin:0; padding:0 }
+  body { font-family:-apple-system,"Microsoft YaHei","PingFang SC",sans-serif; background:var(--bg); color:var(--text); line-height:1.65 }
+  .container { max-width:720px; margin:0 auto; padding:20px 16px 80px }
+
+  .hero { background:linear-gradient(135deg,#1e1b4b,#312e81,#4338ca); color:#fff; border-radius:var(--radius); padding:32px 24px 24px; margin-top:16px; box-shadow:0 4px 24px rgba(99,102,241,.25) }
+  .hero h1 { font-size:1.5em; margin-bottom:6px }
+  .hero .emoji { font-size:2em; display:block; margin-bottom:8px }
+  .hero p { opacity:.85; font-size:.9em; line-height:1.6 }
+
+  .progress-wrap { position:sticky; top:0; z-index:100; background:var(--bg); padding:14px 0 8px }
+  .progress-top { display:flex; justify-content:space-between; align-items:center; margin-bottom:6px }
+  .progress-top span { font-size:.8em; color:var(--sub) }
+  .progress-bar { height:5px; background:#e2e8f0; border-radius:3px; overflow:hidden }
+  .progress-fill { height:100%; background:linear-gradient(90deg,var(--accent),#8b5cf6); border-radius:3px; transition:width .35s ease }
+
+  .section { margin-top:20px }
+  .section-head { display:flex; align-items:center; gap:10px; margin-bottom:6px }
+  .section-head .icon { width:36px; height:36px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:1.1em; flex-shrink:0 }
+  .section-head h2 { font-size:1.05em; font-weight:700 }
+  .section-head .tag { font-size:.68em; padding:2px 8px; border-radius:12px; font-weight:600; white-space:nowrap }
+  .tag-y { background:#fef3c7; color:#b45309 } .tag-x { background:#e0e7ff; color:#4338ca }
+  .section-desc { font-size:.84em; color:var(--sub); margin-bottom:14px; padding-left:46px }
+
+  .card { background:var(--card); border-radius:var(--radius); padding:20px 22px; box-shadow:var(--shadow) }
+
+  .q { padding:14px 0; border-bottom:1px solid #f1f5f9 }
+  .q:last-child { border:none }
+  .q-text { font-size:.93em; font-weight:600; margin-bottom:8px }
+  .q-hint { font-size:.78em; color:var(--sub); margin-bottom:6px; font-weight:400 }
+  .q-reverse { display:inline-block; font-size:.72em; background:#fef2f2; color:#dc2626; padding:1px 7px; border-radius:8px; margin-left:6px; font-weight:400 }
+  .q-attn { background:linear-gradient(135deg,#fffbeb,#fef3c7); border:1.5px dashed #f59e0b; border-radius:10px; padding:14px 16px; margin:12px 0 }
+  .q-attn .q-text { color:#92400e }
+
+  .opts { display:flex; gap:6px; flex-wrap:wrap }
+  .opts label { display:flex; align-items:center; gap:4px; padding:7px 12px; border:1.5px solid #e2e8f0; border-radius:8px; cursor:pointer; font-size:.83em; transition:.15s; background:#fff; user-select:none }
+  .opts label:hover { border-color:var(--accent); background:#f8f7ff }
+  .opts input[type=radio] { accent-color:var(--accent); width:14px; height:14px; margin:0 }
+  .opts:has(input:checked) label:has(input:checked) { border-color:var(--accent); background:#eef2ff; font-weight:600; color:var(--accent) }
+
+  .inp-row { display:flex; align-items:center; gap:8px; flex-wrap:wrap }
+  .inp-row input[type=number] { width:90px; padding:9px 10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:.95em; text-align:center; transition:.15s }
+  .inp-row input[type=number]:focus { border-color:var(--accent); outline:none; box-shadow:0 0 0 3px rgba(99,102,241,.1) }
+  .inp-row .unit { font-size:.85em; color:var(--sub) }
+  .time-inp { display:flex; align-items:center; gap:4px; flex-wrap:wrap }
+  .time-inp input { width:58px; padding:8px 6px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:.9em; text-align:center }
+  .time-inp input:focus { border-color:var(--accent); outline:none; box-shadow:0 0 0 3px rgba(99,102,241,.1) }
+  .time-inp span { font-size:.8em; color:var(--sub) }
+
+  .checks { display:flex; flex-direction:column; gap:7px }
+  .checks label { display:flex; align-items:center; gap:8px; padding:8px 12px; border:1.5px solid #e2e8f0; border-radius:8px; cursor:pointer; font-size:.88em; transition:.15s }
+  .checks label:hover { border-color:var(--accent); background:#f8f7ff }
+  .checks input[type=checkbox] { accent-color:var(--accent); width:16px; height:16px }
+
+  /* Y preview (中性色,仅显示计算结果) */
+  .y-preview { display:none; margin-top:14px; padding:14px 18px; border-radius:10px; font-size:.88em; background:#f8fafc; border:1.5px solid #e2e8f0 }
+  .y-preview.show { display:flex; align-items:center; gap:12px; flex-wrap:wrap }
+  .y-preview .y-val { font-size:2em; font-weight:800; min-width:70px; text-align:center; color:var(--accent) }
+
+  .btn-row { display:flex; gap:10px; justify-content:center; margin-top:28px }
+  .btn { padding:13px 40px; border:none; border-radius:10px; font-size:1em; font-weight:700; cursor:pointer; transition:.2s }
+  .btn-go { background:linear-gradient(135deg,var(--accent),#8b5cf6); color:#fff; box-shadow:0 4px 14px rgba(99,102,241,.3) }
+  .btn-go:hover { transform:translateY(-2px); box-shadow:0 6px 20px rgba(99,102,241,.4) }
+  .btn-go:disabled { opacity:.45; transform:none; box-shadow:none; cursor:not-allowed }
+  .btn-out { background:#fff; color:var(--text); border:1.5px solid #e2e8f0 }
+  .btn-out:hover { background:#f8fafc }
+  .btn-sm { padding:8px 16px; font-size:.85em; border-radius:8px; background:#eef2ff; color:var(--accent); border:1.5px solid #c7d2fe; cursor:pointer }
+  .btn-sm:hover { background:#e0e7ff }
+
+  .overlay { display:none; position:fixed; inset:0; background:rgba(15,23,42,.6); backdrop-filter:blur(2px); z-index:999; justify-content:center; align-items:center }
+  .overlay.show { display:flex }
+  .overlay-card { background:#fff; border-radius:var(--radius); padding:36px 28px; text-align:center; max-width:440px; width:90%; box-shadow:0 20px 60px rgba(0,0,0,.15); max-height:90vh; overflow-y:auto }
+  .overlay-card p { color:var(--sub); margin-top:8px; font-size:.9em; line-height:1.7 }
+
+  .consent-box { background:#f8f7ff; border:1.5px solid #e0e7ff; border-radius:10px; padding:14px 16px; margin-top:12px }
+  .consent-box label { display:flex; align-items:flex-start; gap:8px; font-size:.87em; cursor:pointer; line-height:1.5 }
+  .consent-box input[type=checkbox] { margin-top:1px; width:17px; height:17px; accent-color:var(--accent); flex-shrink:0 }
+
+  .health-tip { text-align:left; background:#f0fdf4; border:1.5px solid #bbf7d0; border-radius:10px; padding:12px 14px; margin-top:14px; font-size:.83em; color:#166534; line-height:1.7 }
+
+  .footer { text-align:center; color:var(--sub); font-size:.75em; margin-top:30px }
+
+  @media (max-width:600px) {
+    .container { padding:10px 8px 80px }
+    .card { padding:14px 12px }
+    .opts label { padding:6px 8px; font-size:.78em }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- ===== HERO ===== -->
+  <div class="hero">
+    <span class="emoji">🌙</span>
+    <h1>大学生睡眠状况调查问卷</h1>
+    <p>本调查旨在了解同学们的<strong>睡眠时长</strong>以及可能影响睡眠的各种因素。问卷约 5–8 分钟，匿名填写，数据仅用于学术研究。</p>
+  </div>
+
+  <!-- ===== PROGRESS ===== -->
+  <div class="progress-wrap">
+    <div class="progress-top"><span>📝 作答进度</span><span id="progressPct">0%</span></div>
+    <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+  </div>
+
+  <form id="mainForm" novalidate>
+
+    <!-- ===== 0. 知情同意 + 筛选 ===== -->
+    <div class="section" id="s0">
+      <div class="card">
+        <div class="q">
+          <div class="q-text">是否为<strong>全日制本科在读</strong>学生？</div>
+          <div class="opts"><label><input type="radio" name="scr_stu" value="yes" required><span>是</span></label><label><input type="radio" name="scr_stu" value="no"><span>否</span></label></div>
+        </div>
+        <div class="consent-box">
+          <label><input type="checkbox" id="consentCb" required> <span>我已知情并自愿参与。问卷<strong>匿名、不收集姓名学号</strong>，数据仅用于整体分析，可随时退出。完成问卷即视为知情同意。</span></label>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== 1. 基本信息 ===== -->
+    <div class="section" id="s1">
+      <div class="section-head"><div class="icon" style="background:#f1f5f9">👤</div><h2>基本信息</h2></div>
+      <div class="card">
+        <div class="q"><div class="q-text">性别</div><div class="opts"><label><input type="radio" name="A1" value="男" required><span>男</span></label><label><input type="radio" name="A1" value="女"><span>女</span></label><label><input type="radio" name="A1" value="不愿透露"><span>不愿透露</span></label></div></div>
+        <div class="q"><div class="q-text">年级</div><div class="opts"><label><input type="radio" name="A2" value="大一" required><span>大一</span></label><label><input type="radio" name="A2" value="大二"><span>大二</span></label><label><input type="radio" name="A2" value="大三"><span>大三</span></label><label><input type="radio" name="A2" value="大四"><span>大四</span></label><label><input type="radio" name="A2" value="大五"><span>大五</span></label></div></div>
+        <div class="q"><div class="q-text">专业类别</div><div class="opts"><label><input type="radio" name="A3" value="医学类" required><span>医学类</span></label><label><input type="radio" name="A3" value="非医学类"><span>非医学类</span></label></div></div>
+        <div class="q"><div class="q-text">住宿情况</div><div class="opts"><label><input type="radio" name="A4" value="住校" required><span>住校</span></label><label><input type="radio" name="A4" value="走读"><span>走读/校外</span></label></div></div>
+        <div class="q"><div class="q-text">请如实勾选以下情况（可多选；若勾选任一排除项，将不纳入本次研究）</div><div class="checks">
+          <label><input type="checkbox" name="A5" value="sleep_disorder"><span>已确诊睡眠障碍或正在服用镇静催眠药物</span></label>
+          <label><input type="checkbox" name="A5" value="shift"><span>经常倒班/夜班兼职</span></label>
+          <label><input type="checkbox" name="A5" value="stress_event"><span>近两周重大应激事件</span></label>
+          <label><input type="checkbox" name="A5" value="mental_drug"><span>确诊精神类疾病且长期服药</span></label>
+          <label><input type="checkbox" name="A5" value="none"><span>以上都没有</span></label>
+        </div></div>
+      </div>
+    </div>
+
+    <!-- ===== 2. Y 睡眠时长 ===== -->
+    <div class="section" id="s2">
+      <div class="section-head"><div class="icon" style="background:#fef3c7">⏱️</div><h2>你的睡眠时长 <span class="tag tag-y">核心指标</span></h2></div>
+      <div class="section-desc">请尽量准确回忆<strong>过去一个月</strong>的平均状况。</div>
+      <div class="card">
+        <div class="q"><div class="q-text">上课日（周一至周五）平均每晚 <strong>实际睡着</strong> 的时间</div><div class="q-hint">净睡眠时间，不是躺在床上看手机的时间</div><div class="inp-row"><input type="number" name="I1" min="2" max="14" step="0.5" placeholder="如 6.5" required><span class="unit">小时 / 晚</span></div></div>
+        <div class="q"><div class="q-text">周末/假日平均每晚 <strong>实际睡着</strong> 的时间</div><div class="inp-row"><input type="number" name="I2" min="2" max="14" step="0.5" placeholder="如 8.5" required><span class="unit">小时 / 晚</span></div></div>
+        <div class="q"><div class="q-text">工作日通常几点 <strong>上床准备睡觉</strong></div><div class="time-inp"><input type="number" name="I3_h" min="20" max="27" placeholder="时" required><span>点</span><input type="number" name="I3_m" min="0" max="59" step="5" placeholder="分" required><span>分</span><span style="font-size:.75em;color:var(--sub)">（凌晨1点=25:00）</span></div></div>
+        <div class="q"><div class="q-text">工作日通常几点 <strong>起床</strong></div><div class="time-inp"><input type="number" name="I4_h" min="4" max="14" placeholder="时" required><span>点</span><input type="number" name="I4_m" min="0" max="59" step="5" placeholder="分" required><span>分</span></div></div>
+        <div class="q"><div class="q-text">你觉得自己目前的睡眠时长充足吗</div><div class="opts"><label><input type="radio" name="I5" value="非常不足" required><span>非常不足</span></label><label><input type="radio" name="I5" value="比较不足"><span>比较不足</span></label><label><input type="radio" name="I5" value="基本足够"><span>基本足够</span></label><label><input type="radio" name="I5" value="完全足够"><span>完全足够</span></label></div></div>
+        <div class="y-preview" id="yPreview">
+          <div class="y-val" id="yValue">—</div>
+          <div><strong>你的加权日均睡眠时长</strong><br><span style="font-size:.78em;color:var(--sub)">加权日均 = (上课日×5 + 周末×2) ÷ 7</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== X1 学业负担 ===== -->
+    <div class="section" id="s3">
+      <div class="section-head"><div class="icon" style="background:#e0e7ff">📚</div><h2>学业负担 <span class="tag tag-x">维度一</span></h2></div>
+      <div class="section-desc">学业负荷是影响睡眠时长的常见因素。请根据<strong>本学期</strong>情况作答。</div>
+      <div class="card" data-module="B">
+        <div class="q" data-name="B1"><div class="q-text">我每周的课时数很多，课程安排得很满</div><div class="opts"></div></div>
+        <div class="q" data-name="B2"><div class="q-text">我每天课外要花大量时间用于自习、作业或预习复习</div><div class="opts"></div></div>
+        <div class="q" data-name="B3"><div class="q-text">作业、实验报告或课程项目的截止日期让我感到应接不暇</div><div class="opts"></div></div>
+        <div class="q" data-name="B4"><div class="q-text">考试/考核的频率和密度让我感到压力很大</div><div class="opts"></div></div>
+        <div class="q" data-name="B5"><div class="q-text">我因为学业负担而不得不牺牲休息和娱乐时间</div><div class="opts"></div></div>
+      </div>
+    </div>
+
+    <!-- ===== X2 睡前屏幕使用 ===== -->
+    <div class="section" id="s4">
+      <div class="section-head"><div class="icon" style="background:#e0e7ff">📱</div><h2>睡前电子屏幕使用 <span class="tag tag-x">维度二</span></h2></div>
+      <div class="section-desc">屏幕使用是影响入睡和睡眠时长的重要因素。请根据<strong>过去一个月</strong>作答。<br>前 3 题：1=从不 → 5=几乎每天；第 4 题：1=完全不符合 → 5=完全符合。</div>
+      <div class="card" data-module="C">
+        <div class="q" data-name="C1" data-scale="freq"><div class="q-text">在计划睡觉前的 1 小时内，你使用手机/平板等电子设备进行娱乐（非学习）吗</div><div class="opts"></div></div>
+        <div class="q" data-name="C2" data-scale="freq"><div class="q-text">关灯上床后，你仍会继续刷手机或看电子屏幕吗</div><div class="opts"></div></div>
+        <div class="q" data-name="C3" data-scale="freq"><div class="q-text">你因为看手机/追剧/打游戏而比计划时间更晚上床睡觉吗</div><div class="opts"></div></div>
+        <div class="q" data-name="C4"><div class="q-text">睡前使用电子设备后，我明显感到入睡变困难了</div><div class="opts"></div></div>
+        <div class="q" data-name="C5" data-scale="day"><div class="q-text">过去一个月，平均每周有几天在 23:00 后仍使用电子设备进行娱乐</div><div class="opts"></div></div>
+      </div>
+    </div>
+
+    <!-- ===== X3 运动锻炼 ===== -->
+    <div class="section" id="s5">
+      <div class="section-head"><div class="icon" style="background:#e0e7ff">🏃</div><h2>运动锻炼 <span class="tag tag-x">维度三</span></h2></div>
+      <div class="section-desc">规律运动有助睡眠。请根据<strong>过去一个月</strong>作答。1=完全不符合 → 5=完全符合。</div>
+      <div class="card" data-module="D">
+        <div class="q" data-name="D1"><div class="q-text">我每周至少进行 3 次体育锻炼（每次 ≥ 20 分钟、身体出汗）</div><div class="opts"></div></div>
+        <div class="q" data-name="D2"><div class="q-text">我每次锻炼的时间足够长，能让我感到充分运动了</div><div class="opts"></div></div>
+        <div class="q" data-name="D3"><div class="q-text">我锻炼时通常会达到中等或以上的强度（如跑步、球类、力量训练等）</div><div class="opts"></div></div>
+        <div class="q" data-name="D4"><div class="q-text">除了上课和走路，我每天大部分时间都在坐着 <span class="q-reverse">反向</span></div><div class="opts"></div></div>
+        <div class="q" data-name="D5"><div class="q-text">课外时间我基本不运动 <span class="q-reverse">反向</span></div><div class="opts"></div></div>
+      </div>
+    </div>
+
+    <!-- ===== X4 心理压力 ===== -->
+    <div class="section" id="s6">
+      <div class="section-head"><div class="icon" style="background:#e0e7ff">🧠</div><h2>心理压力 <span class="tag tag-x">维度四</span></h2></div>
+      <div class="section-desc">心理状态与睡眠密切相关。1=从不 → 5=几乎总是。</div>
+      <div class="card" data-module="E">
+        <div class="q" data-name="E1"><div class="q-text">你感到无法掌控生活中重要事情的频率</div><div class="opts"></div></div>
+        <div class="q" data-name="E2"><div class="q-text">你感到紧张和"压力山大"的频率</div><div class="opts"></div></div>
+        <div class="q" data-name="E3"><div class="q-text">你感到情绪低落、提不起精神的频率</div><div class="opts"></div></div>
+        <div class="q" data-name="E4"><div class="q-text">你感到有信心处理好自己面临的问题的频率 <span class="q-reverse">反向</span></div><div class="opts"></div></div>
+        <div class="q" data-name="E5"><div class="q-text">你对未来感到迷茫或担忧的频率</div><div class="opts"></div></div>
+      </div>
+    </div>
+
+    <!-- ===== X5 咖啡因摄入 ===== -->
+    <div class="section" id="s7">
+      <div class="section-head"><div class="icon" style="background:#e0e7ff">☕</div><h2>咖啡因摄入 <span class="tag tag-x">维度五</span></h2></div>
+      <div class="section-desc">咖啡因是已知的睡眠干扰因素。前 4 题：1=从不 2=很少(月1–3次) 3=有时(周1–2次) 4=经常(周3–5次) 5=几乎每天。<br>请根据<strong>过去一个月</strong>作答。</div>
+      <div class="card" data-module="F">
+        <div class="q" data-name="F1" data-scale="freq2"><div class="q-text">你喝咖啡的频率（速溶/现磨/即饮均算）</div><div class="opts"></div></div>
+        <div class="q" data-name="F2" data-scale="freq2"><div class="q-text">你喝浓茶的频率（红茶/绿茶/乌龙等泡饮）</div><div class="opts"></div></div>
+        <div class="q" data-name="F3" data-scale="freq2"><div class="q-text">你喝奶茶的频率（含茶底的奶茶）</div><div class="opts"></div></div>
+        <div class="q" data-name="F4" data-scale="freq2"><div class="q-text">你喝功能饮料的频率（红牛/魔爪/东鹏等）</div><div class="opts"></div></div>
+        <div class="q" data-name="F5"><div class="q-text">我在下午或晚上（14:00 之后）也会摄入含咖啡因的饮品</div><div class="opts"></div></div>
+      </div>
+    </div>
+
+    <!-- ===== X6 作息规律性 ===== -->
+    <div class="section" id="s8">
+      <div class="section-head"><div class="icon" style="background:#e0e7ff">🕐</div><h2>作息规律性 <span class="tag tag-x">维度六</span></h2></div>
+      <div class="section-desc">作息是否规律直接影响睡眠时长。请根据<strong>过去一个月</strong>作答。1=完全不符合 → 5=完全符合。</div>
+      <div class="card" data-module="G">
+        <div class="q" data-name="G1"><div class="q-text">在工作日（周一至周五），我每天差不多同一时间上床睡觉</div><div class="opts"></div></div>
+        <div class="q" data-name="G2"><div class="q-text">在工作日（周一至周五），我每天差不多同一时间起床</div><div class="opts"></div></div>
+        <div class="q" data-name="G3"><div class="q-text">周末/假日的上床时间比工作日晚很多 <span class="q-reverse">反向</span></div><div class="opts"></div></div>
+        <div class="q-attn" data-name="G4"><div class="q-text">⚠️ 注意力检测：本题请直接选择 <strong>"完全不符合"（第 1 个选项）</strong></div><div class="opts"></div></div>
+        <div class="q" data-name="G5"><div class="q-text">我每天的睡眠时长波动很大，有时睡得很多有时很少 <span class="q-reverse">反向</span></div><div class="opts"></div></div>
+      </div>
+    </div>
+
+    <!-- ===== X7 睡眠环境 ===== -->
+    <div class="section" id="s9">
+      <div class="section-head"><div class="icon" style="background:#e0e7ff">🏠</div><h2>睡眠环境 <span class="tag tag-x">维度七</span></h2></div>
+      <div class="section-desc">住宿环境直接干扰或促进睡眠。请根据<strong>过去一个月在宿舍</strong>作答（走读者按居住环境）。1=完全不符合 → 5=完全符合。</div>
+      <div class="card" data-module="H">
+        <div class="q" data-name="H1"><div class="q-text">到了我准备睡觉的时间，宿舍里仍然很嘈杂</div><div class="opts"></div></div>
+        <div class="q" data-name="H2"><div class="q-text">到了我准备睡觉的时间，宿舍里的光线仍然让我难以入睡</div><div class="opts"></div></div>
+        <div class="q" data-name="H3"><div class="q-text">室友的作息时间与我不同，影响了我正常入睡</div><div class="opts"></div></div>
+        <div class="q" data-name="H4"><div class="q-text">我的床铺/枕头/被褥不够舒适，影响了我的睡眠</div><div class="opts"></div></div>
+        <div class="q" data-name="H5"><div class="q-text">总体来说，我对宿舍的睡眠环境感到满意 <span class="q-reverse">反向</span></div><div class="opts"></div></div>
+      </div>
+    </div>
+
+    <!-- ===== J. 一致性核查 ===== -->
+    <div class="section" id="s10">
+      <div class="section-head"><div class="icon" style="background:#f1f5f9">✅</div><h2>最后核对</h2></div>
+      <div class="section-desc">请再次作答此题，用于数据质量检验。</div>
+      <div class="card">
+        <div class="q" data-name="J1"><div class="q-text">过去一个月，平均每周有几天在 23:00 后仍使用电子设备进行娱乐？<br><span style="font-size:.78em;color:var(--sub)">（与前面第 C5 题相同，请诚信作答）</span></div><div class="opts"></div></div>
+      </div>
+    </div>
+
+    <!-- Submit -->
+    <div class="btn-row">
+      <button type="button" class="btn btn-out" onclick="window.scrollTo({top:0,behavior:'smooth'})">⬆ 回到顶部</button>
+      <button type="submit" class="btn btn-go" id="submitBtn">✅ 提交问卷</button>
+    </div>
+  </form>
+
+  <div class="footer">🌙 大学生睡眠状况调查 · 匿名填写 · 数据严格保密 · 仅用于学术研究</div>
+</div>
+
+<!-- 成功 Overlay -->
+<div class="overlay" id="successOv">
+  <div class="overlay-card">
+    <span style="font-size:3em;display:block;margin-bottom:8px">🎉</span>
+    <h3>提交成功，感谢参与！</h3>
+    <p>你的回答将为改善校园睡眠健康提供宝贵数据。</p>
+    <div class="health-tip">
+      <strong>🌱 睡眠健康小贴士：</strong>
+      18–25 岁青年适宜睡眠时长约为 <strong>7–9 小时</strong>。建议保持规律作息、睡前 1 小时减少电子屏幕使用、白天适量运动、下午之后少喝含咖啡因饮品。
+      若长期存在入睡困难、夜间易醒或白天严重嗜睡，建议前往校医院或心理咨询中心寻求帮助。
+    </div>
+  </div>
+</div>
+
+<!-- 排除 Overlay -->
+<div class="overlay" id="failOv">
+  <div class="overlay-card">
+    <span style="font-size:3em;display:block;margin-bottom:8px">🙏</span>
+    <h3>感谢关注</h3>
+    <p>本调查面向全日制本科在读且不符合排除条件的学生。感谢你的关注与支持！</p>
+  </div>
+</div>
+
+<!-- 提交失败 Overlay -->
+<div class="overlay" id="errOv">
+  <div class="overlay-card">
+    <span style="font-size:3em;display:block;margin-bottom:8px">😥</span>
+    <h3>提交未成功</h3>
+    <p id="errMsg">网络异常，请稍后重试。若多次失败，可先复制下方备份再联系调查员。</p>
+    <div style="margin-top:16px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+      <button class="btn-sm" onclick="window.location.reload()">🔄 重新填写</button>
+      <button class="btn-sm" id="copyBackupBtn">📋 复制回答备份</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ==================== CONFIG（部署时修改此处） ====================
+// MODE 选择数据收集通道:
+//   'local'  → 本地收集服务器(collect_server.py),同源 /api/submit
+//   'github' → 公网收集: 每条回答以 Issue 形式提交到 GitHub 仓库(无需服务器,
+//              同学用微信/QQ 传问卷 HTML 文件,双击打开填写即可,数据照常入仓)
+//              需先填写下方 GITHUB 配置(建仓库 + 生成 token,见 survey-server/README.md)
+const CONFIG = {
+  MODE: 'github',            // 公网收集: 回答以 Issue 提交到 GitHub 仓库
+  ENDPOINT: '/api/submit',   // MODE='local' 时使用
+  GITHUB: {                  // __XX__ 占位符由 GitHub Actions 构建时自动替换(见 .github/workflows/deploy.yml)
+    OWNER: '__GITHUB_OWNER__',
+    REPO:  '__GITHUB_REPO__',
+    TOKEN: '__SURVEY_TOKEN__',
+  },
+};
+
+// ==================== 量级标签 ====================
+const L5  = ['1 完全不符合','2 比较不符合','3 不确定','4 比较符合','5 完全符合'];
+const FRQ = ['1 从不','2 很少','3 有时','4 经常','5 几乎每天'];
+const FRQ2= ['1 从不','2 很少(月1-3次)','3 有时(周1-2次)','4 经常(周3-5次)','5 几乎每天'];
+const ALW = ['1 从不','2 很少','3 有时','4 经常','5 几乎总是'];
+const DAY = ['1 0天','2 1-2天','3 3-4天','4 5-6天','5 几乎每天'];
+
+// ==================== 动态生成 Likert 选项 ====================
+document.querySelectorAll('.card[data-module] .q').forEach(q => {
+  const nm = q.dataset.name;
+  const opts = q.querySelector('.opts');
+  if (!opts) return;
+  const scale = q.dataset.scale || 'l5';
+  const labels = { l5:L5, freq:FRQ, freq2:FRQ2, alw:ALW, day:DAY }[scale] || L5;
+  opts.innerHTML = labels.map((l,i)=>`<label><input type="radio" name="${nm}" value="${i+1}" required><span>${l}</span></label>`).join('');
+});
+document.querySelector('#s10 .q .opts').innerHTML = DAY.map((l,i)=>`<label><input type="radio" name="J1" value="${i+1}" required><span>${l}</span></label>`).join('');
+
+// ==================== 进度条 ====================
+function allRadios(){ return document.querySelectorAll('#mainForm input[type=radio][required]'); }
+function allTexts(){ return document.querySelectorAll('#mainForm input[type=number][required]'); }
+function updateProgress(){
+  const rSet=new Set(), aSet=new Set();
+  allRadios().forEach(r=>rSet.add(r.name));
+  document.querySelectorAll('#mainForm input[type=radio]:checked').forEach(r=>{if(rSet.has(r.name))aSet.add(r.name);});
+  let tDone=0; allTexts().forEach(t=>{if(t.value.trim())tDone++;});
+  const total=rSet.size+allTexts().length, done=aSet.size+tDone;
+  const pct=Math.round(done/total*100);
+  document.getElementById('progressFill').style.width=pct+'%';
+  document.getElementById('progressPct').textContent=done+'/'+total+' ('+pct+'%)';
+}
+document.querySelectorAll('#mainForm input').forEach(el=>{el.addEventListener('change',updateProgress);el.addEventListener('input',updateProgress);});
+
+// ==================== Y 加权日均预览(中性显示) ====================
+function updateYPreview(){
+  const i1=parseFloat(document.querySelector('input[name="I1"]')?.value);
+  const i2=parseFloat(document.querySelector('input[name="I2"]')?.value);
+  const box=document.getElementById('yPreview');
+  if (isNaN(i1)||isNaN(i2)||i1<=0||i2<=0) { box.classList.remove('show'); return; }
+  const y=((i1*5+i2*2)/7).toFixed(1);
+  box.classList.add('show');
+  document.getElementById('yValue').textContent = y+' h';
+}
+document.querySelectorAll('input[name="I1"], input[name="I2"]').forEach(el => el.addEventListener('input', updateYPreview));
+
+// ==================== 作答计时 ====================
+const START_TS = Date.now();
+
+// ==================== 筛选逻辑 ====================
+document.querySelector('input[name="scr_stu"][value="no"]')?.addEventListener('change',function(){
+  if(this.checked){ document.getElementById('mainForm').style.display='none'; document.getElementById('failOv').classList.add('show'); }
+});
+document.querySelector('input[name="scr_stu"][value="yes"]')?.addEventListener('change',function(){
+  if(this.checked){ document.getElementById('mainForm').style.display=''; document.getElementById('failOv').classList.remove('show'); }
+});
+const a5None=document.querySelector('input[name="A5"][value="none"]');
+const a5Oth=document.querySelectorAll('input[name="A5"]:not([value="none"])');
+a5None?.addEventListener('change',function(){if(this.checked)a5Oth.forEach(c=>c.checked=false);});
+a5Oth.forEach(c=>c.addEventListener('change',function(){if(this.checked)a5None.checked=false;}));
+
+// ==================== 提交 ====================
+function rv(name){ return document.querySelector(`input[name="${name}"]:checked`)?.value; }
+
+// 各维度题目编号与反向题(得分统一 1↔5、2↔4、3 不变 转换)
+const MOD_ITEMS = { B:['B1','B2','B3','B4','B5'], C:['C1','C2','C3','C4','C5'], D:['D1','D2','D3','D4','D5'],
+                    E:['E1','E2','E3','E4','E5'], F:['F1','F2','F3','F4','F5'], G:['G1','G2','G3','G4','G5'],
+                    H:['H1','H2','H3','H4','H5'] };
+const REV = { D:[4,5], E:[4], G:[3,5], H:[5] };
+const XMAP = { B:'X1', C:'X2', D:'X3', E:'X4', F:'X5', G:'X6', H:'X7' };
+
+function collectForm(){
+  const D={};
+  D.scr_stu=rv('scr_stu'); D.consent=document.getElementById('consentCb').checked;
+  D.A1=rv('A1'); D.A2=rv('A2'); D.A3=rv('A3'); D.A4=rv('A4');
+  D.A5=[...document.querySelectorAll('input[name="A5"]:checked')].map(c=>c.value);
+  D.I1=parseFloat(document.querySelector('input[name="I1"]').value);
+  D.I2=parseFloat(document.querySelector('input[name="I2"]').value);
+  D.I3_h=parseInt(document.querySelector('input[name="I3_h"]').value)||null;
+  D.I3_m=parseInt(document.querySelector('input[name="I3_m"]').value)||null;
+  D.I4_h=parseInt(document.querySelector('input[name="I4_h"]').value)||null;
+  D.I4_m=parseInt(document.querySelector('input[name="I4_m"]').value)||null;
+  D.I5=rv('I5');
+  ['B1','B2','B3','B4','B5','C1','C2','C3','C4','C5','D1','D2','D3','D4','D5','E1','E2','E3','E4','E5','F1','F2','F3','F4','F5','G1','G2','G3','G4','G5','H1','H2','H3','H4','H5'].forEach(n=>{D[n]=parseInt(rv(n))||null;});
+  D.J1=parseInt(rv('J1'))||null;
+  D.Y=parseFloat(((D.I1*5+D.I2*2)/7).toFixed(1));
+  // 维度得分(反向转换后取均值)
+  Object.keys(MOD_ITEMS).forEach(mod=>{
+    let sum=0,cnt=0;
+    MOD_ITEMS[mod].forEach((nm,idx)=>{
+      const v=D[nm]; if(v===null) return;
+      sum += REV[mod]?.includes(idx+1) ? (6-v) : v; cnt++;
+    });
+    D[XMAP[mod]] = cnt>0 ? parseFloat((sum/cnt).toFixed(2)) : null;
+  });
+  // 质控标记
+  D._attnFail=(rv('G4')!=='1');
+  const c5=parseInt(rv('C5')), j1=parseInt(rv('J1'));
+  D._consistDiff=(!isNaN(c5)&&!isNaN(j1)) ? Math.abs(c5-j1) : null;
+  D._durationSec=Math.round((Date.now()-START_TS)/1000);
+  D._submittedAt=new Date().toISOString();
+  return D;
+}
+
+document.getElementById('mainForm').addEventListener('submit', async function(e){
+  e.preventDefault();
+  if (!document.querySelector('input[name="scr_stu"][value="yes"]')?.checked) { alert('请确认全日制本科在读。'); return; }
+  if (!document.getElementById('consentCb').checked) { alert('请勾选知情同意。'); return; }
+  // 排除项检查
+  const ex = [...document.querySelectorAll('input[name="A5"]:checked')].map(c=>c.value).filter(v=>v!=='none');
+  if (ex.length>0) { document.getElementById('failOv').classList.add('show'); return; }
+
+  const names=new Set(); allRadios().forEach(r=>names.add(r.name));
+  for (const n of names) { if(!rv(n)){ document.querySelector(`input[name="${n}"]`)?.closest('.section')?.scrollIntoView({behavior:'smooth',block:'center'}); alert('请完成所有题目。'); return; }}
+  if (rv('G4')!=='1') { alert('⚠️ 注意力检测题（作息规律性板块第 4 题）未按要求作答，请返回修改。'); document.getElementById('s8').scrollIntoView({behavior:'smooth',block:'center'}); return; }
+  const c5=parseInt(rv('C5')), j1=parseInt(rv('J1'));
+  if (!isNaN(c5)&&!isNaN(j1)&&Math.abs(c5-j1)>1) { if(!confirm('⚠️ 一致性核查差异较大，是否仍提交？（建议取消返回修改）')){ document.getElementById('s10').scrollIntoView({behavior:'smooth',block:'center'}); return; }}
+  const i1=parseFloat(document.querySelector('input[name="I1"]').value), i2=parseFloat(document.querySelector('input[name="I2"]').value);
+  if (isNaN(i1)||i1<2||i1>14){ alert('请填写合理的上课日睡眠时长（2–14 小时）。'); return; }
+  if (isNaN(i2)||i2<2||i2>14){ alert('请填写合理的周末睡眠时长（2–14 小时）。'); return; }
+
+  const D = collectForm();
+  const submitBtn=document.getElementById('submitBtn');
+  submitBtn.disabled=true; submitBtn.textContent='⏳ 提交中…';
+
+  let ok=false;
+  try {
+    if (CONFIG.MODE === 'github') {
+      // 公网通道: 提交为 GitHub Issue(匿名数据,无隐私内容)
+      const res = await fetch('https://api.github.com/repos/' + CONFIG.GITHUB.OWNER + '/' + CONFIG.GITHUB.REPO + '/issues', {
+        method:'POST',
+        headers:{
+          'Authorization':'Bearer ' + CONFIG.GITHUB.TOKEN,
+          'Accept':'application/vnd.github+json',
+          'Content-Type':'application/json'
+        },
+        body: JSON.stringify({
+          title: '问卷提交 ' + new Date().toISOString().slice(0,19),
+          body: JSON.stringify(D, null, 2),
+          labels: ['survey-response']
+        })
+      });
+      ok = res.ok;
+      if (!ok) console.error('GitHub 返回错误:', res.status, await res.text().catch(()=>''));
+    } else {
+      // 本地通道: 收集服务器
+      const res = await fetch(CONFIG.ENDPOINT, {
+        method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(D)
+      });
+      ok = res.ok;
+      if (!ok) console.error('服务器返回错误:', res.status, await res.text().catch(()=>''));
+    }
+  } catch(err){ console.error('提交异常:', err); }
+
+  submitBtn.disabled=false; submitBtn.textContent='✅ 提交问卷';
+  if (ok) {
+    window.__backupJson = JSON.stringify(D,null,2);
+    document.getElementById('successOv').classList.add('show');
+    window.scrollTo({top:0,behavior:'smooth'});
+  } else {
+    document.getElementById('errMsg').textContent = '未能连接数据服务器，请稍后重试。若反复失败，可点击"复制回答备份"后联系调查员手动录入。';
+    window.__backupJson = JSON.stringify(D,null,2);
+    document.getElementById('errOv').classList.add('show');
+  }
+});
+
+// 备份复制按钮
+document.getElementById('copyBackupBtn')?.addEventListener('click', async function(){
+  try { await navigator.clipboard.writeText(window.__backupJson||''); alert('已复制回答备份。'); }
+  catch { alert('复制失败，请查看浏览器控制台（F12 → Console）中的 JSON。'); console.log('回答备份:', window.__backupJson); }
+});
+
+updateProgress();
+</script>
+
+</body>
+</html>
