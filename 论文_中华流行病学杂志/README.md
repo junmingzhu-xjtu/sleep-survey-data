@@ -9,7 +9,7 @@
 ├── 正文_大学生睡眠时长现状及影响因素.docx / .md   # 稿件正文
 ├── SI_补充材料.md             # 补充材料: 问卷全文、统计复核、变量编码
 └── data/
-    ├── analysis_results.json  # 全部表格统计量(脚本自动生成)
+    ├── analysis_results.json  # 全部表格统计量
     └── analysis_dataset_160.csv  # 分析数据集(160 条,SPSS/Excel 可读)
 ```
 
